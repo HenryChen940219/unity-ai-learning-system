@@ -1,9 +1,12 @@
+using System.Collections;
 using System.IO;
 using UnityEngine;
+using UnityEngine.Networking;
 
 /// <summary>
-/// 從專案根目錄（Editor）或 exe 同層目錄（Build）的 secrets.json 讀取 API 金鑰。
-/// 用法：SecretLoader.GeminiApiKey / SecretLoader.GoogleCloudApiKey
+/// Editor：從專案根目錄的 secrets.json 讀取。
+/// Android Build：從 Assets/StreamingAssets/secrets.json 讀取（需用 UnityWebRequest）。
+/// 用法：先在場景掛 SecretsBootstrapper，再使用 SecretLoader.GeminiApiKey。
 /// </summary>
 public static class SecretLoader
 {
@@ -14,44 +17,43 @@ public static class SecretLoader
         public string google_cloud_api_key;
     }
 
-    private static Secrets _cache;
+    public static string GeminiApiKey      { get; private set; } = "";
+    public static string GoogleCloudApiKey { get; private set; } = "";
+    public static bool   IsReady           { get; private set; } = false;
 
-    // ── 公開屬性 ──────────────────────────────────────────────
-    public static string GeminiApiKey       => GetSecrets()?.gemini_api_key      ?? string.Empty;
-    public static string GoogleCloudApiKey  => GetSecrets()?.google_cloud_api_key ?? string.Empty;
-
-    // ── 內部邏輯 ──────────────────────────────────────────────
-    private static Secrets GetSecrets()
+    public static IEnumerator LoadAsync()
     {
-        if (_cache != null) return _cache;
+        if (IsReady) yield break;
 
-        string path = GetSecretsPath();
+        string path;
 
+#if UNITY_EDITOR
+        path = Path.GetFullPath(Path.Combine(Application.dataPath, "../secrets.json"));
         if (!File.Exists(path))
+            path = Path.Combine(Application.streamingAssetsPath, "secrets.json");
+#else
+        path = Path.Combine(Application.streamingAssetsPath, "secrets.json");
+#endif
+
+        using var req = UnityWebRequest.Get(path);
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogError($"[SecretLoader] 找不到 secrets.json！\n預期路徑：{path}\n" +
-                           "Editor：請把 secrets.json 放在專案根目錄（與 Assets/ 同層）。\n" +
-                           "Build：請把 secrets.json 放在 .exe 旁邊的同一個資料夾。");
-            return null;
+            Debug.LogError($"[SecretLoader] 讀取失敗：{req.error}\n路徑：{path}");
+            yield break;
         }
 
-        string json = File.ReadAllText(path, System.Text.Encoding.UTF8);
-        _cache = JsonUtility.FromJson<Secrets>(json);
+        var secrets = JsonUtility.FromJson<Secrets>(req.downloadHandler.text);
+        if (secrets == null)
+        {
+            Debug.LogError("[SecretLoader] secrets.json 解析失敗，請確認 JSON 格式。");
+            yield break;
+        }
 
-        if (_cache == null)
-            Debug.LogError("[SecretLoader] secrets.json 解析失敗，請確認 JSON 格式正確。");
-        else
-            Debug.Log("[SecretLoader] 成功讀取 secrets.json");
-
-        return _cache;
-    }
-
-    /// <summary>
-    /// Editor：Application.dataPath = &lt;ProjectRoot&gt;/Assets → ../secrets.json = 專案根目錄
-    /// Build ：Application.dataPath = &lt;BuildDir&gt;/GameName_Data → ../secrets.json = .exe 同層目錄
-    /// </summary>
-    private static string GetSecretsPath()
-    {
-        return Path.GetFullPath(Path.Combine(Application.dataPath, "../secrets.json"));
+        GeminiApiKey      = secrets.gemini_api_key      ?? "";
+        GoogleCloudApiKey = secrets.google_cloud_api_key ?? "";
+        IsReady = true;
+        Debug.Log("[SecretLoader] 金鑰載入成功");
     }
 }

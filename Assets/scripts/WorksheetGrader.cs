@@ -21,7 +21,6 @@ public class WorksheetGrader : MonoBehaviour
     public Button btnCloseResult;
 
     [Header("Gemini 設定")]
-    public string apiKey;
     public string modelName = "gemini-2.5-flash";
 
     [Header("主場景參考")]
@@ -195,7 +194,7 @@ public class WorksheetGrader : MonoBehaviour
 
         promptText = promptText.Replace("\"", "\\\"").Replace("\n", "\\n");
         string json = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + promptText + "\" }, { \"inline_data\": { \"mime_type\": \"image/jpeg\", \"data\": \"" + base64Image + "\" } } ] } ] }";
-        string url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={apiKey}";
+        string url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={SecretLoader.GeminiApiKey}";
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {

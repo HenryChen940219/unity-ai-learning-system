@@ -2,36 +2,66 @@ using UnityEngine;
 
 public class ARCharacterLoop : MonoBehaviour
 {
-    public Transform lampTransform; // ©ì¤J¾À¿Oª«¥ó
-    public Light lampLight;         // ©ì¤J¾À¿O¸Ìªº Light ¤¸¥ó
-    public float moveSpeed = 0.5f;  // ²¾°Ê³t«×
-    public float maxDistance = 3.0f; // ±z·Q­n³]©wªº¨«°Ê¸ôµ{
-    public float detectRange = 1.0f; // ·PÀ³¶ZÂ÷
+    [Header("ç‡ˆå…·")]
+    public Transform lampTransform;
+    public Light lampLight;
 
-    private Vector3 startPosition;
+    [Header("ç§»å‹•è¨­å®š")]
+    public float moveSpeed = 0.08f;
+    public float maxDistance = 3.0f;
+    public float detectRange = 0.4f;
 
-    void Start()
+    [Header("å‹•ç•«è¨­å®šï¼ˆä¾ä½ çš„ Animator Controller å¡«å…¥ï¼‰")]
+    [Tooltip("è¦æ’­æ”¾çš„å‹•ç•«ç‹€æ…‹åç¨±ï¼ˆMixamo Walking ä¸‹è¼‰å¾Œé€šå¸¸å« 'Walking' æˆ– 'mixamo.com'ï¼‰")]
+    public string walkStateName = "Walking";
+    [Tooltip("æ§åˆ¶èµ°è·¯é€Ÿåº¦çš„ Blend åƒæ•¸åç¨±ï¼Œè‹¥ Controller æ²’æœ‰æ­¤åƒæ•¸å¯ç•™ç©º")]
+    public string blendParamName = "Blend";
+
+    private Vector3 startLocalPosition;
+
+    void OnEnable()
     {
-        startPosition = transform.position; // ¬ö¿ı¥XµoÂI
+        startLocalPosition = transform.localPosition;
+        StartCoroutine(PlayWalkAfterFrame());
+    }
+
+    private System.Collections.IEnumerator PlayWalkAfterFrame()
+    {
+        yield return null;
+        var animator = GetComponent<Animator>();
+        if (animator == null) yield break;
+
+        animator.enabled = true;
+
+        if (!string.IsNullOrEmpty(blendParamName))
+        {
+            // ç¢ºèªåƒæ•¸å­˜åœ¨å†è¨­å€¼ï¼Œé¿å… Animator è­¦å‘Š
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == blendParamName && param.type == AnimatorControllerParameterType.Float)
+                {
+                    animator.SetFloat(blendParamName, 1f);
+                    break;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(walkStateName))
+            animator.Play(walkStateName, 0, 0f);
     }
 
     void Update()
     {
-        // 1. ©¹«e¤è²¾°Ê
-        transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
+        transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime, Space.Self);
 
-        // 2. ÀË¬d¶ZÂ÷­«¸m
-        float distFromStart = Vector3.Distance(transform.position, startPosition);
+        float distFromStart = Vector3.Distance(transform.localPosition, startLocalPosition);
         if (distFromStart >= maxDistance)
-        {
-            transform.position = startPosition; // Àş²¾¦^­ìÂI
-        }
+            transform.localPosition = startLocalPosition;
 
-        // 3. ³B²z¿O¥ú·PÀ³
         if (lampTransform != null && lampLight != null)
         {
-            float distToLamp = Vector3.Distance(transform.position, lampTransform.position);
-            lampLight.enabled = (distToLamp <= detectRange); // °÷ªñ´N«G¡A¤Ó»·´Nº¶
+            float distToLamp = Vector3.Distance(transform.localPosition, lampTransform.localPosition);
+            lampLight.enabled = (distToLamp <= detectRange);
         }
     }
 }

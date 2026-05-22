@@ -5,6 +5,7 @@ using System.Linq;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.InputSystem;
 
 public class MainScene : MonoBehaviour
 {
@@ -182,12 +183,10 @@ public class MainScene : MonoBehaviour
     {
         if (chatInputPanel != null && chatInputPanel.activeSelf && chatInputField != null && chatInputField.isFocused)
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            var kb = Keyboard.current;
+            if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
             {
-                if (string.IsNullOrEmpty(Input.compositionString))
-                {
-                    ClickSendChat();
-                }
+                ClickSendChat();
             }
         }
     }
@@ -445,10 +444,6 @@ public class MainScene : MonoBehaviour
         {
             question = currentDraft;
         }
-        else if (!string.IsNullOrEmpty(Input.compositionString))
-        {
-            question += Input.compositionString;
-        }
 
         question = question.Replace("\n", "").Replace("\r", "").Trim();
 
@@ -470,7 +465,7 @@ public class MainScene : MonoBehaviour
         }
     }
 
-    private void ResetAvatarToOriginalState()
+    private void ResetAvatarToOriginalState(bool hide = false)
     {
         if (avatarObject != null)
         {
@@ -478,7 +473,7 @@ public class MainScene : MonoBehaviour
             avatarObject.transform.position = initialWorldPos;
             avatarObject.transform.rotation = initialWorldRot;
             avatarObject.transform.localScale = initialScale;
-            avatarObject.SetActive(true);
+            avatarObject.SetActive(!hide);
         }
     }
 
@@ -519,6 +514,8 @@ public class MainScene : MonoBehaviour
                 Image panelBg = panelWebduino.GetComponent<Image>();
                 if (panelBg != null) panelBg.enabled = true;
             }
+
+            if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(true);
 
             CloseAllConfirmAndFeedbackPanels();
             if (buttonTriggerHint != null) buttonTriggerHint.SetActive(false);
@@ -621,6 +618,8 @@ public class MainScene : MonoBehaviour
             if (panelBg != null) panelBg.enabled = false;
         }
 
+        if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(false);
+
         if (avatarObject != null)
         {
             avatarObject.transform.SetParent(arCameraObject.transform, false);
@@ -654,6 +653,8 @@ public class MainScene : MonoBehaviour
             Image panelBg = panelWebduino.GetComponent<Image>();
             if (panelBg != null) panelBg.enabled = true;
         }
+
+        if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(true);
 
         ResetAvatarToOriginalState();
 
@@ -695,6 +696,7 @@ public class MainScene : MonoBehaviour
                 {
                     if (aiAssistant != null) aiAssistant.SetQuizMode(true);
                     HideMicButton();
+                    if (avatarObject != null) avatarObject.SetActive(false);
                     quizManager.gameObject.SetActive(true);
                     StartCoroutine(DelayStartQuiz());
                 }

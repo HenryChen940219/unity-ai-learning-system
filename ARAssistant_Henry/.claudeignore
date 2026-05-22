@@ -1,0 +1,42 @@
+# --- 隱私與安全性 (最重要) ---
+# 忽略 Firebase 與 Gemini 的金鑰檔案
+Assets/google-services.json
+Assets/google-services.json.meta
+secrets.json
+
+# --- Unity 產生的肥大檔案 (減少配額消耗) ---
+# 忽略場景與資源檔，因為 Claude 讀不懂二進位檔，讀了也沒用
+*.unity
+*.unity.meta
+*.prefab
+*.prefab.meta
+*.asset
+*.asset.meta
+*.mat
+*.mat.meta
+
+# 忽略 3D 模型與多媒體資源
+*.fbx
+*.obj
+*.png
+*.jpg
+*.jpeg
+*.wav
+*.mp3
+*.mp4
+
+# --- 編譯與快取 (Git 已經忽略的，Claude 也該忽略) ---
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+.vs/
+.gradle/
+
+# --- 專案定義檔 (Claude 通常不需要讀這些) ---
+*.csproj
+*.sln
+*.unityproj

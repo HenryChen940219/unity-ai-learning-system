@@ -58,16 +58,11 @@ public class UnityAndGeminiV3 : MonoBehaviour
             "7. 是物聯網，不要聽成互聯網。";
 
     private List<ChatMessage> chatHistory = new List<ChatMessage>();
-    private string apiURL;
+    private string ApiURL => $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={SecretLoader.GeminiApiKey}";
     private int maxRetries = 3;
 
     void Start()
     {
-        string apiKey = SecretLoader.GeminiApiKey;
-        if (string.IsNullOrEmpty(apiKey))
-            Debug.LogError("[UnityAndGeminiV3] Gemini API Key 讀取失敗，請確認 secrets.json 存在且格式正確。");
-
-        apiURL = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
         chatHistory.Clear();
 
         ChatMessage systemSetting = new ChatMessage();
@@ -89,6 +84,12 @@ public class UnityAndGeminiV3 : MonoBehaviour
 
         Debug.Log("✅ Kelly 準備好回答教材問題與專題引導了！");
 
+        StartCoroutine(PlayOpeningAfterSecretsReady());
+    }
+
+    private IEnumerator PlayOpeningAfterSecretsReady()
+    {
+        yield return new WaitUntil(() => SecretLoader.IsReady);
         if (textToSpeechManager != null)
         {
             textToSpeechManager.SendTextToGoogle("哈囉，我是助教 Kelly！有什麼看不懂的都可以問我呦！");
@@ -166,7 +167,7 @@ public class UnityAndGeminiV3 : MonoBehaviour
 
         while (currentRetry <= maxRetries && !success)
         {
-            using (UnityWebRequest webRequest = new UnityWebRequest(apiURL, "POST"))
+            using (UnityWebRequest webRequest = new UnityWebRequest(ApiURL, "POST"))
             {
                 webRequest.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 webRequest.downloadHandler = new DownloadHandlerBuffer();
