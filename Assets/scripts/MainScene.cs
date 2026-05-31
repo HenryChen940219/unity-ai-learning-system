@@ -149,9 +149,14 @@ public class MainScene : MonoBehaviour
 
     private bool isShowingTargetHint = false;
 
+    [Header("Worksheet Flow Manager")]
+    public WorksheetFlowManager worksheetFlowManager;
+    public ARImageTracker arImageTracker;
+
     [Header("AR System")]
     public GameObject arCameraObject;
     [SerializeField] GameObject mainCamera2D;
+    [SerializeField] Button buttonWebduinoExit;
 
     [Header("AR Hologram System")]
     [SerializeField] Canvas arWorldCanvas;
@@ -479,6 +484,9 @@ public class MainScene : MonoBehaviour
 
     public void ClickConceptMapNext()
     {
+        if (worksheetFlowManager != null && worksheetFlowManager.IsActive)
+            return;
+
         if (arCameraObject != null && arCameraObject.activeSelf)
         {
             bool isLastStage = (currentConceptIndex == 2);
@@ -504,6 +512,12 @@ public class MainScene : MonoBehaviour
 
     public void ClickConceptMapBack()
     {
+        if (worksheetFlowManager != null && worksheetFlowManager.IsActive)
+        {
+            worksheetFlowManager.HandleBack();
+            return;
+        }
+
         if (arCameraObject != null && arCameraObject.activeSelf)
         {
             if (arCameraObject != null) arCameraObject.SetActive(false);
@@ -1258,7 +1272,15 @@ public class MainScene : MonoBehaviour
         TrackPanelTime(null);
         ResetAvatarToOriginalState();
 
-        ShowTargetHintUI();
+        if (worksheetFlowManager != null)
+        {
+            if (buttonConceptMapNext) buttonConceptMapNext.gameObject.SetActive(false);
+            worksheetFlowManager.ShowThemeSelection();
+        }
+        else
+        {
+            ShowTargetHintUI();
+        }
     }
 
     public void ClickBackFromConceptMap()
@@ -1426,6 +1448,7 @@ public class MainScene : MonoBehaviour
         isWorksheetPassed = false;
         if (btnOpenGraderText != null) btnOpenGraderText.text = "批改學習單";
 
+        if (worksheetFlowManager != null) worksheetFlowManager.Reset();
         if (panelWebduino != null) panelWebduino.SetActive(false);
         if (panelInfo != null) panelInfo.SetActive(true);
         TrackPanelTime(null);
@@ -1446,6 +1469,91 @@ public class MainScene : MonoBehaviour
 
         if (worksheetGrader != null) worksheetGrader.CloseGrader();
     }
+
+    public void HideAvatar()
+    {
+        if (avatarObject != null) avatarObject.SetActive(false);
+    }
+
+    // ────── WorksheetFlowManager 需要的 AR 切換方法 ──────
+
+    public void EnterARModeForStep()
+    {
+        if (arCameraObject == null) return;
+
+        if (mainCamera2D != null) mainCamera2D.SetActive(false);
+        arCameraObject.SetActive(true);
+
+        if (panelWebduino != null)
+        {
+            Image panelBg = panelWebduino.GetComponent<Image>();
+            if (panelBg != null) panelBg.enabled = false;
+        }
+        if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(false);
+
+        if (avatarObject != null) avatarObject.SetActive(false);
+
+        if (buttonConceptMapBack != null) buttonConceptMapBack.gameObject.SetActive(false);
+        if (buttonWebduinoExit != null) buttonWebduinoExit.gameObject.SetActive(false);
+    }
+
+    public void ExitARModeForStep()
+    {
+        if (arCameraObject != null) arCameraObject.SetActive(false);
+        if (mainCamera2D != null) mainCamera2D.SetActive(true);
+
+        if (panelWebduino != null)
+        {
+            Image panelBg = panelWebduino.GetComponent<Image>();
+            if (panelBg != null) panelBg.enabled = true;
+        }
+        if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(true);
+
+        ResetAvatarToOriginalState(hide: true);
+
+        if (buttonConceptMapBack != null) buttonConceptMapBack.gameObject.SetActive(true);
+        if (buttonWebduinoExit != null) buttonWebduinoExit.gameObject.SetActive(true);
+
+        if (arImageTracker != null) arImageTracker.ResetTracking();
+    }
+
+    public void SetGraderButtonVisible(bool visible)
+    {
+        if (btnOpenGrader != null) btnOpenGrader.gameObject.SetActive(visible);
+    }
+
+    // 四個步驟全部完成後由 WorksheetFlowManager 呼叫
+    public void OnAllWorksheetStepsDone()
+    {
+        if (btnOpenGrader != null) btnOpenGrader.gameObject.SetActive(true);
+    }
+
+    // 從主題選擇畫面按返回時，回到教材列表
+    public void CloseWorksheetFlow()
+    {
+        if (worksheetFlowManager != null) worksheetFlowManager.Reset();
+        CloseWebduinoSlide();
+    }
+
+    // 從主題選擇畫面的叉叉按鈕，回到教材最後一頁
+    public void BackToLastSlide()
+    {
+        if (worksheetFlowManager != null) worksheetFlowManager.Reset();
+
+        ResetAvatarToOriginalState(false);
+
+        if (slideImageDisplay != null) slideImageDisplay.gameObject.SetActive(true);
+
+        if (buttonNext) buttonNext.gameObject.SetActive(true);
+        if (buttonPrev) buttonPrev.gameObject.SetActive(true);
+        if (buttonOpenConceptMap) buttonOpenConceptMap.gameObject.SetActive(true);
+        if (buttonConceptMapBack) buttonConceptMapBack.gameObject.SetActive(false);
+        if (buttonConceptMapNext) buttonConceptMapNext.gameObject.SetActive(false);
+
+        UpdateSlideDisplay();
+    }
+
+    // ────────────────────────────────────────────────────
 
     public void ClickShowWebduinoDetail() => ShowTopicDetailStats("Webduino");
     public void ClickShowArduinoDetail() => ShowTopicDetailStats("Arduino");
